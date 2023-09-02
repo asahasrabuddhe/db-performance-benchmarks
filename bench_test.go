@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -197,7 +198,7 @@ func BenchmarkNonPreparedStmtQueryRowGorm(b *testing.B) {
 		var tt Test
 		err = db.Where("id = ?", rand.Int31n(1000)).First(&tt).Error
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
+			if strings.Contains(err.Error(), "record not found") {
 				continue
 			}
 			b.Fatal(err)
