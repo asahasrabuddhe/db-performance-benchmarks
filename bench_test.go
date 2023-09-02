@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"testing"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +23,8 @@ func BenchmarkNonPreparedStmtExec(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err = db.Exec("INSERT INTO test (data) VALUES (?)", uuid.New().String())
+		tt := Test{Data: uuid.New().String()}
+		_, err = db.Exec("INSERT INTO test (data) VALUES (?)", tt.Data)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -33,6 +33,40 @@ func BenchmarkNonPreparedStmtExec(b *testing.B) {
 	b.StopTimer()
 
 	err = DropTestTable(db)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		b.Fatal(err)
+	}
+}
+
+func BenchmarkNonPreparedStmtExecGorm(b *testing.B) {
+	db, err := ConnectGORM()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	err = CreateTestTableGORM(db, &Test{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		tt := Test{Data: uuid.New().String()}
+		err = db.Save(&tt).Error
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	b.StopTimer()
+
+	err = DropTestTableGORM(db, &Test{})
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -62,7 +96,8 @@ func BenchmarkPreparedStmtExec(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, err = stmt.Exec(uuid.New().String())
+		tt := Test{Data: uuid.New().String()}
+		_, err = stmt.Exec(tt.Data)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -98,7 +133,8 @@ func BenchmarkNonPreparedStmtQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 1000; i++ {
-		_, err = db.Exec("INSERT INTO test (data) VALUES (?)", uuid.New().String())
+		tt := Test{Data: uuid.New().String()}
+		_, err = db.Exec("INSERT INTO test (data) VALUES (?)", tt.Data)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
@@ -110,8 +146,8 @@ func BenchmarkNonPreparedStmtQuery(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		var data string
-		err = db.QueryRow("SELECT data FROM test WHERE id = ?", rand.Int31n(1000)).Scan(&data)
+		var tt Test
+		err = db.QueryRow("SELECT * FROM test WHERE id = ?", rand.Int31n(1000)).Scan(&tt.ID, &tt.Data)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
@@ -123,6 +159,54 @@ func BenchmarkNonPreparedStmtQuery(b *testing.B) {
 	b.StopTimer()
 
 	err = DropTestTable(db)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	err = db.Close()
+	if err != nil {
+		b.Fatal(err)
+	}
+}
+
+func BenchmarkNonPreparedStmtQueryGorm(b *testing.B) {
+	db, err := ConnectGORM()
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	err = CreateTestTableGORM(db, &Test{})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for i := 0; i < 1000; i++ {
+		tt := Test{Data: uuid.New().String()}
+		err = db.Save(&tt).Error
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
+			b.Fatal(err)
+		}
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		var tt Test
+		err = db.Where("id = ?", rand.Int31n(1000)).First(&tt).Error
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
+			b.Fatal(err)
+		}
+	}
+
+	b.StopTimer()
+
+	err = DropTestTableGORM(db, &Test{})
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -145,13 +229,14 @@ func BenchmarkPreparedStmtQuery(b *testing.B) {
 	}
 
 	for i := 0; i < 1000; i++ {
-		_, err = db.Exec("INSERT INTO test (data) VALUES (?)", uuid.New().String())
+		tt := Test{Data: uuid.New().String()}
+		_, err = db.Exec("INSERT INTO test (data) VALUES (?)", tt.Data)
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
 
-	stmt, err := db.Prepare("SELECT data FROM test WHERE id = ?")
+	stmt, err := db.Prepare("SELECT * FROM test WHERE id = ?")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -159,8 +244,8 @@ func BenchmarkPreparedStmtQuery(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		var data string
-		err = stmt.QueryRow(rand.Int31n(1000)).Scan(&data)
+		var tt Test
+		err = stmt.QueryRow(rand.Int31n(1000)).Scan(&tt.ID, &tt.Data)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
