@@ -121,7 +121,7 @@ func BenchmarkPreparedStmtExec(b *testing.B) {
 	}
 }
 
-func BenchmarkNonPreparedStmtQuery(b *testing.B) {
+func BenchmarkNonPreparedStmtQueryRow(b *testing.B) {
 	db, err := Connect()
 	if err != nil {
 		b.Fatal(err)
@@ -169,7 +169,7 @@ func BenchmarkNonPreparedStmtQuery(b *testing.B) {
 	}
 }
 
-func BenchmarkNonPreparedStmtQueryGorm(b *testing.B) {
+func BenchmarkNonPreparedStmtQueryRowGorm(b *testing.B) {
 	db, err := ConnectGORM()
 	if err != nil {
 		b.Fatal(err)
@@ -217,7 +217,7 @@ func BenchmarkNonPreparedStmtQueryGorm(b *testing.B) {
 	}
 }
 
-func BenchmarkPreparedStmtQuery(b *testing.B) {
+func BenchmarkPreparedStmtQueryRow(b *testing.B) {
 	db, err := Connect()
 	if err != nil {
 		b.Fatal(err)
