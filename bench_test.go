@@ -11,16 +11,12 @@ import (
 )
 
 func BenchmarkNonPreparedStmtExec(b *testing.B) {
-	db, err := sql.Open("mysql", "benchuser:benchp@ss@tcp(localhost:3306)/benchdb")
+	db, err := Connect()
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test (
-				id INT NOT NULL AUTO_INCREMENT,
-				data VARCHAR(255) NOT NULL,
-				PRIMARY KEY (id)
-			)`)
+	err = CreateTestTable(db)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -34,7 +30,7 @@ func BenchmarkNonPreparedStmtExec(b *testing.B) {
 		}
 	}
 
-	_, err = db.Exec("DROP TABLE test")
+	err = DropTestTable(db)
 	if err != nil {
 		b.Fatal(err)
 	}
