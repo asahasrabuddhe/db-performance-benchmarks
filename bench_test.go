@@ -30,6 +30,8 @@ func BenchmarkNonPreparedStmtExec(b *testing.B) {
 		}
 	}
 
+	b.StopTimer()
+
 	err = DropTestTable(db)
 	if err != nil {
 		b.Fatal(err)
@@ -42,16 +44,12 @@ func BenchmarkNonPreparedStmtExec(b *testing.B) {
 }
 
 func BenchmarkPreparedStmtExec(b *testing.B) {
-	db, err := sql.Open("mysql", "benchuser:benchp@ss@tcp(localhost:3306)/benchdb")
+	db, err := Connect()
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test (
-				id INT NOT NULL AUTO_INCREMENT,
-				data VARCHAR(255) NOT NULL,
-				PRIMARY KEY (id)
-			)`)
+	err = CreateTestTable(db)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -70,12 +68,14 @@ func BenchmarkPreparedStmtExec(b *testing.B) {
 		}
 	}
 
+	b.StopTimer()
+
 	err = stmt.Close()
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	_, err = db.Exec("DROP TABLE test")
+	err = DropTestTable(db)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -87,16 +87,12 @@ func BenchmarkPreparedStmtExec(b *testing.B) {
 }
 
 func BenchmarkNonPreparedStmtQuery(b *testing.B) {
-	db, err := sql.Open("mysql", "benchuser:benchp@ss@tcp(localhost:3306)/benchdb")
+	db, err := Connect()
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test (
-				id INT NOT NULL AUTO_INCREMENT,
-				data VARCHAR(255) NOT NULL,
-				PRIMARY KEY (id)
-			)`)
+	err = CreateTestTable(db)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -117,11 +113,16 @@ func BenchmarkNonPreparedStmtQuery(b *testing.B) {
 		var data string
 		err = db.QueryRow("SELECT data FROM test WHERE id = ?", rand.Int31n(1000)).Scan(&data)
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
 			b.Fatal(err)
 		}
 	}
 
-	_, err = db.Exec("DROP TABLE test")
+	b.StopTimer()
+
+	err = DropTestTable(db)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -133,16 +134,12 @@ func BenchmarkNonPreparedStmtQuery(b *testing.B) {
 }
 
 func BenchmarkPreparedStmtQuery(b *testing.B) {
-	db, err := sql.Open("mysql", "benchuser:benchp@ss@tcp(localhost:3306)/benchdb")
+	db, err := Connect()
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test (
-				id INT NOT NULL AUTO_INCREMENT,
-				data VARCHAR(255) NOT NULL,
-				PRIMARY KEY (id)
-			)`)
+	err = CreateTestTable(db)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -172,12 +169,14 @@ func BenchmarkPreparedStmtQuery(b *testing.B) {
 		}
 	}
 
+	b.StopTimer()
+
 	err = stmt.Close()
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	_, err = db.Exec("DROP TABLE test")
+	err = DropTestTable(db)
 	if err != nil {
 		b.Fatal(err)
 	}
